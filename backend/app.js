@@ -5,12 +5,13 @@ const path = require('path'); // Donne accès au système de fichier
 
 const sauceRoutes = require('./routes/sauce');
 const userRoutes = require('./routes/user');
+require('dotenv').config();
 
 mongoose
-  .connect(
-    'mongodb+srv://Tchessi_P6:LBBjudODJfgZl1Sv@cluster0.kl2up.mongodb.net/myFirstDatabase?retryWrites=true&w=majority',
-    { useNewUrlParser: true, useUnifiedTopology: true }
-  )
+  .connect(process.env.SECRET_DB, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
   .then(() => console.log('Connexion à MongoDB réussie !'))
   .catch(() => console.log('Connexion à MongoDB échouée !'));
 
