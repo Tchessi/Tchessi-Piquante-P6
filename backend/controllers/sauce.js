@@ -3,6 +3,7 @@ const Sauce = require('../models/sauce');
 
 // Récupération du module 'file system' de Node qui permet de gérer ici les téléchargements et modifications d'images
 const fs = require('fs');
+const sauce = require('../models/sauce');
 
 /*** PERMET LA CREATION DE NOUVELLE 'SAUCE' */
 exports.createSauce = (req, res, next) => {
@@ -36,21 +37,31 @@ exports.createSauce = (req, res, next) => {
 
 /*** PARMET LA MODIFICATION DE "SAUCE" */
 exports.modifySauce = (req, res, next) => {
-  const sauceObject = req.file
-    ? {
-        // On modifie les données et on ajoute la nouvelle image
-        ...JSON.parse(req.body.sauce),
-        imageUrl: `${req.protocol}://${req.get('host')}/images/${
-          req.file.filename
-        }`,
+  Sauce.findOne({ _id: req.params.id })
+    .then((sauce) => {
+      if (sauce.userId != req.userId) {
+        res.status(403).json({
+          message: 'Action non autorisée',
+        });
+        return;
       }
-    : { ...req.body };
-  Sauce.updateOne(
-    { _id: req.params.id },
-    { ...sauceObject, _id: req.params.id }
-  )
-    .then(() => res.status(200).json({ message: 'Sauce modifiée !' }))
-    .catch((error) => res.status(400).json({ error }));
+      const sauceObject = req.file
+        ? {
+            // On modifie les données et on ajoute la nouvelle image
+            ...JSON.parse(req.body.sauce),
+            imageUrl: `${req.protocol}://${req.get('host')}/images/${
+              req.file.filename
+            }`,
+          }
+        : { ...req.body };
+      Sauce.updateOne(
+        { _id: req.params.id },
+        { ...sauceObject, _id: req.params.id }
+      )
+        .then(() => res.status(200).json({ message: 'Sauce modifiée !' }))
+        .catch((error) => res.status(400).json({ error }));
+    })
+    .catch((error) => res.status(400).json({ message: 'Souce non trouvée' }));
 };
 
 /*** PERMET LA SUPPRESSION DE "SAUCE" */
@@ -58,6 +69,12 @@ exports.deleteSauce = (req, res, next) => {
   // Avant de supprimer l'objet, on va le chercher pour obtenir l'url de l'image et supprimer le fichier image de la base
   Sauce.findOne({ _id: req.params.id })
     .then((sauce) => {
+      if (sauce.userId != req.userId) {
+        res.status(403).json({
+          message: 'Action non autorisée',
+        });
+        return;
+      }
       // Pour extraire ce fichier, on récupère l'url de la sauce, et on le split autour de la chaine de caractères, donc le nom du fichier
       const filename = sauce.imageUrl.split('/images/')[1];
       // Avec ce nom de fichier, on appelle unlink pour suppr le fichier
