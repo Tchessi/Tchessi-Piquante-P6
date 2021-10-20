@@ -35,7 +35,7 @@ exports.createSauce = (req, res, next) => {
     .catch((error) => res.status(400).json({ error }));
 };
 
-/*** PARMET LA MODIFICATION DE "SAUCE" */
+/*** PERMET LA MODIFICATION DE "SAUCE" */
 exports.modifySauce = (req, res, next) => {
   Sauce.findOne({ _id: req.params.id })
     .then((sauce) => {
@@ -126,7 +126,11 @@ exports.likeDislikeSauce = (req, res, next) => {
       // Dislike
       Sauce.findOne({ _id: sauceId })
         .then((sauce) => {
-          if (sauce.usersLiked.includes(userId)) {
+          if (sauce.usersLiked.includes(userId) != req.userId) {
+            res.status(403).json({
+              message: 'Action non autorisée',
+            });
+            return;
             Sauce.updateOne(
               { _id: sauceId },
               { $pull: { usersLiked: userId }, $inc: { likes: -1 } } // On incrémente de -1
