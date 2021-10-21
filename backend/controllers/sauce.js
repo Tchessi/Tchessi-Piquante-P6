@@ -110,6 +110,13 @@ exports.likeDislikeSauce = (req, res, next) => {
   let userId = req.body.userId; // On récupère le userID
   let sauceId = req.params.id; // On récupère l'id de la sauce
 
+  if (sauce.userId !== req.userId) {
+    res.status(403).json({
+      message: `Action non autorisée`,
+    });
+    return;
+  }
+
   switch (like) {
     case 1:
       // En cas de Like on push l'utilisateur et on incrémente le compteur de 1
@@ -119,25 +126,25 @@ exports.likeDislikeSauce = (req, res, next) => {
       )
         .then(() => res.status(200).json({ message: `J'aime` }))
         .catch((error) => res.status(400).json({ error }));
-
       break;
 
     case 0:
       // Dislike
       Sauce.findOne({ _id: sauceId })
         .then((sauce) => {
-          if (sauce.usersLiked.includes(userId) != req.userId) {
+          if (sauce.userId !== req.userId) {
             res.status(403).json({
-              message: 'Action non autorisée',
+              message: `Action non autorisée`,
             });
             return;
-            Sauce.updateOne(
-              { _id: sauceId },
-              { $pull: { usersLiked: userId }, $inc: { likes: -1 } } // On incrémente de -1
-            )
-              .then(() => res.status(200).json({ message: `Neutre` }))
-              .catch((error) => res.status(400).json({ error }));
           }
+
+          Sauce.updateOne(
+            { _id: sauceId },
+            { $pull: { usersLiked: userId }, $inc: { likes: -1 } } // On incrémente de -1
+          )
+            .then(() => res.status(200).json({ message: `Neutre` }))
+            .catch((error) => res.status(400).json({ error }));
           // On annule un Dislike, on incrémente de -1
           if (sauce.usersDisliked.includes(userId)) {
             Sauce.updateOne(
