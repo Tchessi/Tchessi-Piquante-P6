@@ -109,67 +109,60 @@ exports.likeDislikeSauce = (req, res, next) => {
   let like = req.body.like; // Like présent dans le body
   let userId = req.body.userId; // On récupère le userID
   let sauceId = req.params.id; // On récupère l'id de la sauce
+  Sauce.findOne({ _id: sauceId }).then((sauce) => {
+    switch (like) {
+      case 1:
+        if (sauce.usersLiked.includes(req.userId)) {
+          res.status(400).json({ message: 'Impossible de faire cette action' });
+          return;
+        }
+        // En cas de Like on push l'utilisateur et on incrémente le compteur de 1
+        Sauce.updateOne(
+          { _id: sauceId },
+          { $push: { usersLiked: userId }, $inc: { likes: +1 } }
+        )
+          .then(() => res.status(200).json({ message: `J'aime` }))
+          .catch((error) => res.status(400).json({ error }));
+        break;
 
-  if (sauce.userId !== req.userId) {
-    res.status(403).json({
-      message: `Action non autorisée`,
-    });
-    return;
-  }
-
-  switch (like) {
-    case 1:
-      // En cas de Like on push l'utilisateur et on incrémente le compteur de 1
-      Sauce.updateOne(
-        { _id: sauceId },
-        { $push: { usersLiked: userId }, $inc: { likes: +1 } }
-      )
-        .then(() => res.status(200).json({ message: `J'aime` }))
-        .catch((error) => res.status(400).json({ error }));
-      break;
-
-    case 0:
-      // Dislike
-      Sauce.findOne({ _id: sauceId })
-        .then((sauce) => {
-          if (sauce.userId !== req.userId) {
-            res.status(403).json({
-              message: `Action non autorisée`,
-            });
-            return;
-          }
-
+      case 0:
+        // Dislike
+        if (sauce.usersLiked.includes(req.userId)) {
           Sauce.updateOne(
             { _id: sauceId },
             { $pull: { usersLiked: userId }, $inc: { likes: -1 } } // On incrémente de -1
           )
             .then(() => res.status(200).json({ message: `Neutre` }))
             .catch((error) => res.status(400).json({ error }));
-          // On annule un Dislike, on incrémente de -1
-          if (sauce.usersDisliked.includes(userId)) {
-            Sauce.updateOne(
-              { _id: sauceId },
-              { $pull: { usersDisliked: userId }, $inc: { dislikes: -1 } }
-            )
-              .then(() => res.status(200).json({ message: `Neutre` }))
-              .catch((error) => res.status(400).json({ error }));
-          }
-        })
-        .catch((error) => res.status(404).json({ error }));
-      break;
+        }
+        // On annule un Dislike, on incrémente de -1
+        if (sauce.usersDisliked.includes(req.userId)) {
+          Sauce.updateOne(
+            { _id: sauceId },
+            { $pull: { usersDisliked: userId }, $inc: { dislikes: -1 } }
+          )
+            .then(() => res.status(200).json({ message: `Neutre` }))
+            .catch((error) => res.status(400).json({ error }));
+        }
+        break;
 
-    case -1:
-      Sauce.updateOne(
-        { _id: sauceId },
-        { $push: { usersDisliked: userId }, $inc: { dislikes: +1 } }
-      )
-        .then(() => {
-          res.status(200).json({ message: `Je n'aime pas` });
-        })
-        .catch((error) => res.status(400).json({ error }));
-      break;
+      case -1:
+        if (sauce.usersDisliked.includes(req.userId)) {
+          res.status(400).json({ message: 'Impossible de faire cette action' });
+          return;
+        }
+        Sauce.updateOne(
+          { _id: sauceId },
+          { $push: { usersDisliked: userId }, $inc: { dislikes: +1 } }
+        )
+          .then(() => {
+            res.status(200).json({ message: `Je n'aime pas` });
+          })
+          .catch((error) => res.status(400).json({ error }));
+        break;
 
-    default:
-      console.log(error);
-  }
+      default:
+        console.log(error);
+    }
+  });
 };
